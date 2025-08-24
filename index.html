@@ -1,1 +1,101 @@
-Hello World
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <title>Border Wait Times</title>
+  </head>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-LZ6B7BBW2K"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-LZ6B7BBW2K');
+  </script>
+  <body>
+    <header class="container">
+      <h1 id="header">Border Wait Times</h1>
+    </header>
+    <main class="container">
+      <button class="outline" id="reverse-button">Reverse</button>
+      <table class="striped">
+        <thead>
+          <tr>
+            <th scope="col">Crossing</th>
+            <th scope="col">Delay (mins)</th>
+            <th scope="col">Last Updated</th>
+          </tr>
+        </thead>
+        <tbody id="wait-time-table-body">
+        </tbody>
+      </table>
+    </main>
+    <footer class="container">
+      <small>Data from <a href="https://www.drivebc.ca/" class="secondary">DriveBC</a></small>
+    </footer>
+  </body>
+  <script>
+    window.onload = function() {
+      const direction = new URLSearchParams(window.location.search).get("dir")
+
+      document.getElementById("header").innerText += ` (${direction == "N" ? "WA to BC" : "BC to WA"})`
+
+      document.getElementById("reverse-button").addEventListener("click", function() {
+        var url = new URL(window.location.href);
+        url.searchParams.set("dir", direction == "N" ? "S" : "N");
+        window.location.replace(url.toString());
+      });
+
+      function loadWaitTimes() {
+        fetch(`https://api.allorigins.win/get?url=${encodeURIComponent("https://www.drivebc.ca/api/bordercrossings/?format=json")}`)
+          .then(response => {
+            if (response.ok) return response.json()
+            throw new Error('Network response was not ok.')
+          })
+          .then(data => {
+            const now = new Date()
+            let waitTimeHtml = JSON.parse(data.contents).map(({
+              name,
+              lanes
+            }) => {
+              const {
+                delay_minutes: delayMinutes,
+                last_updated: lastUpdated
+              } = lanes.find(({
+                lane_type: laneType,
+                lane_direction: laneDirection
+              }) => laneType == "Cars" && laneDirection == (direction == "N" ? "NORTHBOUND" : "SOUTHBOUND"))
+
+              const lastUpdatedDate = new Date(lastUpdated)
+              const diffMs = now.getTime() - lastUpdatedDate.getTime();
+              const diffMinutes = Math.round(diffMs / (1000 * 60));
+              return getWaitTimeHtmlRow(name, delayMinutes, diffMinutes)
+            }).join("")
+            document.getElementById("wait-time-table-body").innerHTML = waitTimeHtml;
+          });
+      }
+
+      function getWaitTimeHtmlRow(name, delayMinutes, lastUpdatedMinutes) {
+        let timeAgoString;
+        if (lastUpdatedMinutes === 0) {
+            timeAgoString = "just now";
+        } else if (lastUpdatedMinutes === 1) {
+            timeAgoString = "1 minute ago";
+        } else {
+            timeAgoString = `${lastUpdatedMinutes} minutes ago`;
+        }
+
+        return `<tr>
+            <th scope="row">${name}</th>
+            <td>${delayMinutes}</td>
+            <td>${timeAgoString}</td>
+          </tr>`
+      }
+
+      loadWaitTimes();
+    };
+  </script>
+</html>
