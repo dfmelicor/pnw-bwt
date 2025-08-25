@@ -30,6 +30,9 @@
           </tr>
         </thead>
         <tbody id="wait-time-table-body">
+          <tr>
+            <td colspan="3"><article aria-busy="true"></article></td>
+          </tr>
         </tbody>
       </table>
     </main>
@@ -50,7 +53,7 @@
       });
 
       function loadWaitTimes() {
-        fetch(`https://api.allorigins.win/get?url=${encodeURIComponent("https://www.drivebc.ca/api/bordercrossings/?format=json")}`)
+        fetch(`https://api.allorigins.win/get?url=${encodeURIComponent("https://www.drivebc.ca/api/bordercrossings/?format=json")}`, {cache: "no-store"})
           .then(response => {
             if (response.ok) return response.json()
             throw new Error('Network response was not ok.')
